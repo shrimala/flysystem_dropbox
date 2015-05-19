@@ -2,10 +2,10 @@
 
 /**
  * @file
- * Contains \Drupal\flysystem\Flysystem\Dropbox.
+ * Contains \Drupal\flysystem_dropbox\Flysystem\Dropbox.
  */
 
-namespace Drupal\flysystem\Flysystem;
+namespace Drupal\flysystem_dropbox\Flysystem;
 
 use Dropbox\Client;
 use Drupal\flysystem\Plugin\FlysystemPluginInterface;
