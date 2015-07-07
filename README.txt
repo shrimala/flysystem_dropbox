@@ -9,7 +9,7 @@ Example configuration:
 
 $schemes = [
   'dropboxexample' => [
-    'type' => 'dropbox',
+    'driver' => 'dropbox',
     'config' => [
       'token' => 'a-long-token-string',
       'client_id' => 'You Client Id Name',

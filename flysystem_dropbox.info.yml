@@ -1,5 +1,6 @@
 name: Flysystem Dropbox
 description: 'Provides a Dropbox plugin for Flysystem.'
+package: Flysystem
 type: module
 core: 8.x
 version: 8.0-dev
