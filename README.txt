@@ -16,6 +16,7 @@ $schemes = [
 
       // Optional.
       'prefix' => 'a/sub/directory',
+      'public' => TRUE, // Serve files directly via Dropbox.
     ],
   ],
 ];
