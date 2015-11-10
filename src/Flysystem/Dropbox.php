@@ -9,27 +9,25 @@ namespace Drupal\flysystem_dropbox\Flysystem;
 
 use Dropbox\Client;
 use Drupal\Core\Logger\RfcLogLevel;
-use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\flysystem\Flysystem\Adapter\MissingAdapter;
 use Drupal\flysystem\Plugin\FlysystemPluginInterface;
 use Drupal\flysystem\Plugin\FlysystemUrlTrait;
-use Drupal\image\Entity\ImageStyle;
-use GuzzleHttp\ClientInterface;
-use GuzzleHttp\Exception\RequestException;
-use GuzzleHttp\Url;
+use Drupal\flysystem\Plugin\ImageStyleGenerationTrait;
+use Guzzle\Http\Url;
 use League\Flysystem\Dropbox\DropboxAdapter;
-use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
  * Drupal plugin for the "Dropbox" Flysystem adapter.
  *
  * @Adapter(id = "dropbox")
  */
-class Dropbox implements FlysystemPluginInterface, ContainerFactoryPluginInterface {
+class Dropbox implements FlysystemPluginInterface {
 
   use FlysystemUrlTrait {
     getExternalUrl as getDownloadlUrl;
   }
+
+  use ImageStyleGenerationTrait;
 
   /**
    * The Dropbox client.
@@ -44,13 +42,6 @@ class Dropbox implements FlysystemPluginInterface, ContainerFactoryPluginInterfa
    * @var string
    */
   protected $clientId;
-
-  /**
-   * The http client.
-   *
-   * @var \GuzzleHttp\ClientInterface
-   */
-  protected $httpClient;
 
   /**
    * The path prefix inside the Dropbox folder.
@@ -81,19 +72,11 @@ class Dropbox implements FlysystemPluginInterface, ContainerFactoryPluginInterfa
    * @param \GuzzleHttp\ClientInterface $http_client
    *   The HTTP client.
    */
-  public function __construct(array $configuration, ClientInterface $http_client) {
+  public function __construct(array $configuration) {
     $this->prefix = isset($configuration['prefix']) ? $configuration['prefix'] : '';
     $this->token = $configuration['token'];
     $this->clientId = $configuration['client_id'];
     $this->usePublic = !empty($configuration['public']);
-    $this->httpClient = $http_client;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition) {
-    return new static($configuration, $container->get('http_client'));
   }
 
   /**
@@ -115,8 +98,8 @@ class Dropbox implements FlysystemPluginInterface, ContainerFactoryPluginInterfa
    * {@inheritdoc}
    */
   public function getExternalUrl($uri) {
-    if ($this->usePublic && $url = $this->getPublicUrl($uri)) {
-      return $url;
+    if ($this->usePublic) {
+      return $this->getPublicUrl($uri);
     }
 
     return $this->getDownloadlUrl($uri);
@@ -158,44 +141,9 @@ class Dropbox implements FlysystemPluginInterface, ContainerFactoryPluginInterfa
     }
 
     // Support image style generation.
-    if (strpos($target, 'styles/') === 0 && $this->generateImageStyle($uri)) {
+    if ($this->generateImageStyle($target)) {
       return $this->getSharableLink($target);
     }
-
-    return FALSE;
-  }
-
-  /**
-   * Generates an image style for a URI.
-   *
-   * @todo This should probably be moved to flysystem proper.
-   *
-   * @param string $uri
-   *   The image style URI.
-   *
-   * @return bool
-   *   True on success, false on failure.
-   */
-  protected function generateImageStyle($uri) {
-    $target = $this->getTarget($uri);
-    if (substr_count($target, '/') < 3) {
-      return FALSE;
-    }
-
-    list(, $style, $scheme, $file) = explode('/', $target, 4);
-
-    if (!$image_style = ImageStyle::load($style)) {
-      return FALSE;
-    }
-
-    $url = Url::fromString($this->getDownloadlUrl($uri));
-    $url->getQuery()->set('itok', $image_style->getPathToken($scheme . '://' . $file));
-
-    try {
-      $response = $this->httpClient->get((string) $url);
-      return $response->getStatusCode() == 200;
-    }
-    catch (RequestException $e) {}
 
     return FALSE;
   }
@@ -219,7 +167,7 @@ class Dropbox implements FlysystemPluginInterface, ContainerFactoryPluginInterfa
       return FALSE;
     }
 
-    $url = Url::fromString($link);
+    $url = Url::factory($link);
     $url->getQuery()->set('dl', 1);
 
     return (string) $url;
